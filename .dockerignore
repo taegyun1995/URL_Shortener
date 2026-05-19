@@ -1,0 +1,41 @@
+# Build artifacts
+.gradle/
+build/
+out/
+bin/
+**/build/
+*.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Git
+.git/
+.gitignore
+
+# Docs (이미지에 포함될 필요 없음)
+docs/
+README.md
+*.md
+
+# Docker
+docker-compose.yml
+.dockerignore
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / dumps
+logs/
+*.log
+*.hprof
+hs_err_pid*.log
