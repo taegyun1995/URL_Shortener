@@ -85,6 +85,17 @@ public class Url {
         return shortKey;
     }
 
+    /**
+     * 더블 세이브 패턴 — placeholder shortKey로 insert 후, 실제 id 기반 키로 교체.
+     * Service 외부에서 호출 금지.
+     */
+    public void assignShortKey(ShortKey newShortKey) {
+        if (newShortKey == null) {
+            throw new IllegalArgumentException("shortKey must not be null");
+        }
+        this.shortKey = newShortKey;
+    }
+
     public Instant expiresAt() {
         return expiresAt;
     }
