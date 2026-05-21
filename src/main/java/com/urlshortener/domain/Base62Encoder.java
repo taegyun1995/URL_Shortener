@@ -46,6 +46,13 @@ public final class Base62Encoder {
     }
 
     /**
+     * 주어진 문자가 Base62 알파벳에 속하는지 검사.
+     */
+    public static boolean isValidChar(char c) {
+        return c < ASCII_RANGE && DECODE_TABLE[c] >= 0;
+    }
+
+    /**
      * @param key Base62 문자만으로 구성된 문자열
      * @return 디코딩된 long 값
      * @throws IllegalArgumentException key가 null/empty이거나 Base62 외 문자 포함 시
