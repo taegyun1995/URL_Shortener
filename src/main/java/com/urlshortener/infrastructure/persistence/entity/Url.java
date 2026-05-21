@@ -1,13 +1,42 @@
-package com.urlshortener.domain;
+package com.urlshortener.infrastructure.persistence.entity;
+
+import com.urlshortener.domain.ShortKey;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 
 import java.time.Instant;
 
-public final class Url {
+@Entity
+@Table(name = "urls")
+public class Url {
 
-    private final String longUrl;
-    private final ShortKey shortKey;
-    private final Instant expiresAt;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "long_url", nullable = false, length = 2048)
+    private String longUrl;
+
+    @Column(name = "short_key", nullable = false, unique = true, length = 7)
+    private ShortKey shortKey;
+
+    @Column(name = "expires_at")
+    private Instant expiresAt;
+
+    @Column(name = "click_count", nullable = false)
     private long clickCount;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    protected Url() {
+        // JPA 전용
+    }
 
     private Url(String longUrl, ShortKey shortKey, Instant expiresAt) {
         this.longUrl = longUrl;
@@ -37,12 +66,31 @@ public final class Url {
         return new Url(longUrl, shortKey, expiresAt);
     }
 
+    @PrePersist
+    void onCreate() {
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
+    }
+
+    public Long id() {
+        return id;
+    }
+
     public String longUrl() {
         return longUrl;
     }
 
     public ShortKey shortKey() {
         return shortKey;
+    }
+
+    public Instant expiresAt() {
+        return expiresAt;
+    }
+
+    public Instant createdAt() {
+        return createdAt;
     }
 
     public long clickCount() {
