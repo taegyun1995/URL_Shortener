@@ -69,6 +69,16 @@ services:
       - prometheus
     restart: unless-stopped
 
+  k6:
+    image: grafana/k6:0.54.0
+    container_name: url-shortener-k6
+    volumes:
+      - ./k6:/scripts:ro
+    depends_on:
+      - app
+    profiles:
+      - load-test  # `docker compose --profile load-test run --rm k6 run /scripts/baseline.js`
+
 volumes:
   mysql-data:
   grafana-data:
