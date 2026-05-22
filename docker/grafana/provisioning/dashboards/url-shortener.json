@@ -1,0 +1,100 @@
+{
+  "title": "URL Shortener — Load Test Dashboard",
+  "uid": "url-shortener-main",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "tags": ["url-shortener"],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Rate (RPS, per URI)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count[1m]))",
+          "legendFormat": "{{uri}}"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "id": 2,
+      "title": "Latency p95 (per URI)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (uri, le) (rate(http_server_requests_seconds_bucket[1m])))",
+          "legendFormat": "p95 {{uri}}"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    },
+    {
+      "id": 3,
+      "title": "HikariCP Connections",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {"expr": "hikaricp_connections_active", "legendFormat": "active"},
+        {"expr": "hikaricp_connections_idle", "legendFormat": "idle"},
+        {"expr": "hikaricp_connections_pending", "legendFormat": "pending (병목 지표)"}
+      ]
+    },
+    {
+      "id": 4,
+      "title": "HTTP Status Codes (rate)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count[1m]))",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "id": 5,
+      "title": "JVM Heap Memory",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "targets": [
+        {
+          "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})",
+          "legendFormat": "heap used"
+        },
+        {
+          "expr": "sum(jvm_memory_max_bytes{area=\"heap\"})",
+          "legendFormat": "heap max"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    },
+    {
+      "id": 6,
+      "title": "HikariCP Connection Acquire Time (avg)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "targets": [
+        {
+          "expr": "rate(hikaricp_connections_acquire_seconds_sum[1m]) / rate(hikaricp_connections_acquire_seconds_count[1m])",
+          "legendFormat": "avg acquire time"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    }
+  ]
+}

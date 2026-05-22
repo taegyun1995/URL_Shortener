@@ -21,6 +21,14 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+    distribution:
+      # HTTP 요청에 히스토그램 버킷 활성화 → histogram_quantile() PromQL 사용 가능
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+      slo:
+        http.server.requests: 10ms, 50ms, 200ms, 500ms
 
 logging:
   level:
