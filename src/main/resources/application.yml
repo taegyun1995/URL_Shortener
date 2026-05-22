@@ -7,6 +7,9 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+app:
+  short-url-host: ${SHORT_URL_HOST:http://localhost:8080}
+
 management:
   endpoints:
     web:
