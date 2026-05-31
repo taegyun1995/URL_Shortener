@@ -14,6 +14,7 @@ services:
       DB_NAME: ${MYSQL_DATABASE:-urlshortener}
       DB_USER: ${MYSQL_USER:-urlshortener}
       DB_PASSWORD: ${MYSQL_PASSWORD:-urlshortener_pass}
+      APP_CACHE_CAFFEINE_ENABLED: "true"
     ports:
       - "8080:8080"
     restart: unless-stopped

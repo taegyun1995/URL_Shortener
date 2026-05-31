@@ -18,8 +18,9 @@ CREATE TABLE IF NOT EXISTS urls (
     expires_at  DATETIME      NULL,
     click_count BIGINT        DEFAULT 0,
 
-    INDEX idx_short_key (short_key),
-    INDEX idx_long_url  (long_url(255))
+    -- long_url UNIQUE: 동시 단축 race condition 방어 (DB가 최종 게이트키퍼)
+    UNIQUE KEY uk_long_url (long_url(255)),
+    INDEX idx_short_key (short_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- click_logs: 리다이렉트 클릭 이력 (4단계에서 본격 사용)
