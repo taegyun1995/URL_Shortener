@@ -1,9 +1,8 @@
 package com.urlshortener.presentation;
 
-import com.urlshortener.application.UrlService;
-import com.urlshortener.domain.ShortKey;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,15 +10,21 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.urlshortener.application.UrlService;
+import com.urlshortener.domain.ShortKey;
+
 @RestController
 @RequestMapping("/api")
+@Slf4j
 public class ShortenController {
 
     private final UrlService urlService;
-    private final String shortUrlHost;
+    private final String     shortUrlHost;
 
-    public ShortenController(UrlService urlService,
-                             @Value("${app.short-url-host}") String shortUrlHost) {
+    public ShortenController(
+            UrlService urlService,
+            @Value("${app.short-url-host}") String shortUrlHost
+    ) {
         this.urlService = urlService;
         this.shortUrlHost = shortUrlHost;
     }
@@ -28,6 +33,7 @@ public class ShortenController {
     public ResponseEntity<ShortenResponse> shorten(@Valid @RequestBody ShortenRequest request) {
         ShortKey key = urlService.shorten(request.url());
         String shortUrl = shortUrlHost + "/" + key.value();
+        log.debug("shorten {} -> {}", request.url(), key);
         return ResponseEntity.status(201).body(new ShortenResponse(shortUrl));
     }
 

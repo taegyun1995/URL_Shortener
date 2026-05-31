@@ -1,8 +1,9 @@
 package com.urlshortener.infrastructure.persistence;
 
-import com.urlshortener.domain.ShortKey;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
+
+import com.urlshortener.domain.ShortKey;
 
 /**
  * ShortKey VO ↔ DB VARCHAR(7) 변환.

@@ -1,73 +1,70 @@
 package com.urlshortener.application;
 
-import com.urlshortener.domain.Base62Encoder;
-import com.urlshortener.domain.ShortKey;
-import com.urlshortener.infrastructure.persistence.entity.Url;
-import com.urlshortener.infrastructure.persistence.repository.UrlRepository;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
+import com.urlshortener.config.CaffeineCacheConfig;
+import com.urlshortener.domain.ShortKey;
+import com.urlshortener.infrastructure.persistence.entity.Url;
+import com.urlshortener.infrastructure.persistence.repository.UrlRepository;
+import org.sqids.Sqids;
 
 @Service
+@Slf4j
 public class UrlService {
 
-    private static final String BASE62_ALPHABET =
-            "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final int SHORT_KEY_LENGTH = 7;
-
     private final UrlRepository urlRepository;
-    private final Base62Encoder base62Encoder;
-    private final SecureRandom random = new SecureRandom();
+    private final Sqids         sqids;
 
-    public UrlService(UrlRepository urlRepository, Base62Encoder base62Encoder) {
+    public UrlService(UrlRepository urlRepository, Sqids sqids) {
         this.urlRepository = urlRepository;
-        this.base62Encoder = base62Encoder;
+        this.sqids = sqids;
     }
 
     @Transactional
     public ShortKey shorten(String longUrl) {
-        // 1) 중복 URL 검사
         return urlRepository.findByLongUrl(longUrl)
-                .map(Url::shortKey)
-                .orElseGet(() -> createNewShortened(longUrl));
+                            .map(existing -> {
+                                log.debug("dedup hit: longUrl already shortened to {}", existing.shortKey());
+                                return existing.shortKey();
+                            })
+                            .orElseGet(() -> createNewShortened(longUrl));
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = CaffeineCacheConfig.URLS_CACHE, key = "#shortKey.value()")
     public String resolve(ShortKey shortKey) {
         return urlRepository.findByShortKey(shortKey)
-                .map(Url::longUrl)
-                .orElseThrow(() -> new ShortKeyNotFoundException(shortKey));
+                            .map(Url::longUrl)
+                            .orElseThrow(() -> new ShortKeyNotFoundException(shortKey));
     }
 
+    /**
+     * 신규 단축 키 발급
+     * 1) placeholder 키로 INSERT → DB가 auto-increment id 부여
+     * 2) 받은 id를 Sqids로 인코딩 → 실제 키
+     * 3) entity의 shortKey 교체 → JPA dirty check가 트랜잭션 종료 시 UPDATE 발행
+     */
     private ShortKey createNewShortened(String longUrl) {
-        // 2) placeholder 키로 insert → id 확보
-        ShortKey placeholder = generatePlaceholderKey();
-        Url url = Url.of(longUrl, placeholder);
-        Url saved = urlRepository.save(url);
+        try {
+            ShortKey placeholder = ShortKey.random(ThreadLocalRandom.current());
+            Url saved = urlRepository.save(Url.of(longUrl, placeholder));
 
-        // 3) 실제 id를 Base62 인코딩 → 7자 패딩
-        String encoded = base62Encoder.encode(saved.id());
-        ShortKey finalKey = ShortKey.of(padTo7(encoded));
+            ShortKey finalKey = ShortKey.of(sqids.encode(List.of(saved.id())));
+            saved.assignShortKey(finalKey);
 
-        // 4) shortKey 교체 (JPA dirty check로 update)
-        saved.assignShortKey(finalKey);
-
-        return finalKey;
-    }
-
-    private ShortKey generatePlaceholderKey() {
-        StringBuilder sb = new StringBuilder(SHORT_KEY_LENGTH);
-        for (int i = 0; i < SHORT_KEY_LENGTH; i++) {
-            sb.append(BASE62_ALPHABET.charAt(random.nextInt(BASE62_ALPHABET.length())));
+            log.debug("shortened: id={} key={}", saved.id(), finalKey);
+            return finalKey;
+        } catch (DataIntegrityViolationException ex) {
+            // long_url UNIQUE 위반 — 다른 트랜잭션이 같은 URL을 먼저 INSERT.
+            // 현재 TX는 rollback. 클라이언트는 재시도 시 기존 키를 받음.
+            log.info("race condition on shorten: {}", longUrl);
+            throw new ConcurrentShorteningException(longUrl, ex);
         }
-        return ShortKey.of(sb.toString());
-    }
-
-    private String padTo7(String encoded) {
-        if (encoded.length() >= SHORT_KEY_LENGTH) {
-            return encoded;
-        }
-        return "0".repeat(SHORT_KEY_LENGTH - encoded.length()) + encoded;
     }
 }

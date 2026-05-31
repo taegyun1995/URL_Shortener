@@ -1,6 +1,5 @@
 package com.urlshortener.application;
 
-import com.urlshortener.domain.Base62Encoder;
 import com.urlshortener.domain.ShortKey;
 import com.urlshortener.infrastructure.persistence.entity.Url;
 import com.urlshortener.infrastructure.persistence.repository.UrlRepository;
@@ -9,14 +8,20 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.sqids.Sqids;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class UrlServiceTest {
@@ -25,7 +30,7 @@ class UrlServiceTest {
     private UrlRepository urlRepository;
 
     @Mock
-    private Base62Encoder base62Encoder;
+    private Sqids sqids;
 
     @InjectMocks
     private UrlService urlService;
@@ -42,14 +47,18 @@ class UrlServiceTest {
                     ReflectionTestUtils.setField(url, "id", 42L);
                     return url;
                 });
-        // id=42 인코딩 → 7자 패딩된 키
-        given(base62Encoder.encode(42L)).willReturn("000000G");
+        // id=42 인코딩 → Sqids로 7자 키 생성
+        given(sqids.encode(List.of(42L))).willReturn("U9NJZQT");
 
         // when
         ShortKey result = urlService.shorten("https://example.com");
 
         // then
-        assertThat(result.value()).isEqualTo("000000G");
+        assertThat(result.value()).isEqualTo("U9NJZQT");
+
+        // INSERT-then-UPDATE 패턴 검증: save 1회 호출 + 인메모리 entity가 최종 키로 교체
+        // (save는 한 번만 명시 호출, UPDATE는 JPA dirty check로 트랜잭션 커밋 시점에 발생)
+        verify(urlRepository, times(1)).save(any(Url.class));
     }
 
     @Test
@@ -65,6 +74,8 @@ class UrlServiceTest {
 
         // then
         assertThat(result).isEqualTo(existingKey);
+        // dedup이 동작하면 save·encode 모두 호출되지 않아야 함
+        verify(urlRepository, never()).save(any(Url.class));
     }
 
     @Test
@@ -91,5 +102,19 @@ class UrlServiceTest {
         assertThatThrownBy(() -> urlService.resolve(unknown))
                 .isInstanceOf(ShortKeyNotFoundException.class)
                 .hasMessageContaining("zzzzzzz");
+    }
+
+    @Test
+    void 동시_단축으로_long_url_UNIQUE_위반시_ConcurrentShorteningException을_던진다() {
+        // given: 다른 트랜잭션이 같은 longUrl을 먼저 INSERT한 상황 시뮬레이션
+        given(urlRepository.findByLongUrl("https://example.com"))
+                .willReturn(Optional.empty());
+        given(urlRepository.save(any(Url.class)))
+                .willThrow(new DataIntegrityViolationException("duplicate long_url"));
+
+        // when & then
+        assertThatThrownBy(() -> urlService.shorten("https://example.com"))
+                .isInstanceOf(ConcurrentShorteningException.class)
+                .hasMessageContaining("https://example.com");
     }
 }

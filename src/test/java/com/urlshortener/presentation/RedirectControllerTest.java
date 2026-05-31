@@ -6,8 +6,8 @@ import com.urlshortener.domain.ShortKey;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.BDDMockito.given;
@@ -22,7 +22,7 @@ class RedirectControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private UrlService urlService;
 
     @Test
@@ -47,7 +47,7 @@ class RedirectControllerTest {
 
     @Test
     void 잘못된_형식의_shortKey_조회시_400을_반환한다() throws Exception {
-        // 'abcdef_'는 7자리지만 '_'는 Base62 외 문자 → ShortKey.of()에서 IAE
+        // 'abcdef_'는 7자리지만 '_'는 ShortKey 알파벳(`0-9a-zA-Z`) 외 문자 → ShortKey.of()에서 IAE
         mockMvc.perform(get("/abcdef_"))
                 .andExpect(status().isBadRequest());
     }

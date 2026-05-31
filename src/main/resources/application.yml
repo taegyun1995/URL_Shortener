@@ -34,6 +34,9 @@ logging:
   level:
     root: INFO
     com.urlshortener: DEBUG
+    # JPA SQL 추적 (공부용 — Phase 2 이후엔 INFO로 복귀 고려)
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
 
 ---
 spring:
