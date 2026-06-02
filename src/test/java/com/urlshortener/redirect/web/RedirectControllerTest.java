@@ -1,7 +1,7 @@
-package com.urlshortener.presentation;
+package com.urlshortener.redirect.web;
 
-import com.urlshortener.application.ShortKeyNotFoundException;
-import com.urlshortener.application.UrlService;
+import com.urlshortener.redirect.application.RedirectService;
+import com.urlshortener.redirect.application.ShortKeyNotFoundException;
 import com.urlshortener.domain.ShortKey;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,11 +23,11 @@ class RedirectControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private UrlService urlService;
+    private RedirectService redirectService;
 
     @Test
     void 등록된_shortKey_조회시_302_리다이렉트한다() throws Exception {
-        given(urlService.resolve(ShortKey.of("abc1234")))
+        given(redirectService.resolve(ShortKey.of("abc1234")))
                 .willReturn("https://example.com/long");
 
         mockMvc.perform(get("/abc1234"))
@@ -38,7 +38,7 @@ class RedirectControllerTest {
     @Test
     void 없는_shortKey_조회시_404를_반환한다() throws Exception {
         ShortKey unknown = ShortKey.of("zzzzzzz");
-        given(urlService.resolve(unknown))
+        given(redirectService.resolve(unknown))
                 .willThrow(new ShortKeyNotFoundException(unknown));
 
         mockMvc.perform(get("/zzzzzzz"))

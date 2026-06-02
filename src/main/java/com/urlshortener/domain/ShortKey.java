@@ -8,8 +8,8 @@ public final class ShortKey {
 
     public static final int LENGTH = 7;
 
-    public static final  String    ALPHABET         = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final int       ASCII_RANGE      = 128;
+    public static final String ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final int ASCII_RANGE = 128;
     private static final boolean[] VALID_CHAR_TABLE = buildValidCharTable();
 
     private static boolean[] buildValidCharTable() {
@@ -66,12 +66,8 @@ public final class ShortKey {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof ShortKey)) {
-            return false;
-        }
+        if (this == o) return true;
+        if (!(o instanceof ShortKey)) return false;
         return value.equals(((ShortKey) o).value);
     }
 

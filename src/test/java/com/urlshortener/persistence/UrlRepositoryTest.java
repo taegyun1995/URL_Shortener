@@ -1,7 +1,6 @@
-package com.urlshortener.infrastructure.persistence.repository;
+package com.urlshortener.persistence;
 
 import com.urlshortener.domain.ShortKey;
-import com.urlshortener.infrastructure.persistence.entity.Url;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;

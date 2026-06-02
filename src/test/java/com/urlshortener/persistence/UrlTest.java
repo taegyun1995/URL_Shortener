@@ -1,4 +1,4 @@
-package com.urlshortener.infrastructure.persistence.entity;
+package com.urlshortener.persistence;
 
 import com.urlshortener.domain.ShortKey;
 import org.junit.jupiter.api.Test;

@@ -1,4 +1,4 @@
-package com.urlshortener.presentation;
+package com.urlshortener.web;
 
 import java.time.Instant;
 import java.util.stream.Collectors;
@@ -10,23 +10,22 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.urlshortener.application.ConcurrentShorteningException;
-import com.urlshortener.application.ShortKeyNotFoundException;
-
+/**
+ * 앱 전역 예외 → {@link ErrorResponse} 변환.
+ * <p>
+ * feature 예외는 {@link ApiException}을 구현하므로, 핸들러는 구체 타입(ShortKeyNotFound 등)을
+ * 몰라도 ApiException 하나로 처리한다. 의존 방향은 feature → web(ApiException)으로 정렬되어
+ * 핸들러가 feature 패키지를 역으로 import하지 않는다.
+ * 그 외 프레임워크/검증 예외(IllegalArgument, @Valid)는 여기서 직접 매핑한다.
+ */
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(ShortKeyNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(ShortKeyNotFoundException ex) {
-        log.info("not found: {}", ex.getMessage());
-        return error(HttpStatus.NOT_FOUND, "NOT_FOUND", ex.getMessage());
-    }
-
-    @ExceptionHandler(ConcurrentShorteningException.class)
-    public ResponseEntity<ErrorResponse> handleConcurrent(ConcurrentShorteningException ex) {
-        log.info("concurrent shortening: {}", ex.getMessage());
-        return error(HttpStatus.CONFLICT, "CONFLICT", "이미 단축 중인 URL입니다. 잠시 후 다시 시도해 주세요.");
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<ErrorResponse> handleApiException(ApiException ex) {
+        log.info("api exception: {} {}", ex.code(), ex.getMessage());
+        return error(ex.status(), ex.code(), ex.clientMessage());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -52,10 +51,4 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status)
                              .body(new ErrorResponse(code, message, Instant.now()));
     }
-
-    public record ErrorResponse(
-            String code,
-            String message,
-            Instant timestamp
-    ) {}
 }

@@ -1,12 +1,18 @@
-package com.urlshortener.infrastructure.persistence.entity;
+package com.urlshortener.persistence;
+
+import com.urlshortener.domain.ShortKey;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.Set;
-import jakarta.persistence.*;
-
-import com.urlshortener.domain.ShortKey;
 
 @Entity
 @Table(name = "urls")
@@ -118,7 +124,7 @@ public class Url {
     /**
      * 더블 세이브 패턴 전용 — placeholder shortKey로 insert 후 실제 id 기반 키로 교체.
      *
-     * <p><b>호출 허용:</b> {@code UrlService}에서만 (생성 직후 1회).<br>
+     * <p><b>호출 허용:</b> {@code ShortenService}에서만 (생성 직후 1회).<br>
      * <b>호출 금지:</b> 컨트롤러, 다른 서비스, 마이그레이션 코드, 테스트 fixture 외 위치.<br>
      * 컴파일러로 막을 수 없어 컨벤션으로 보호한다. 위반 시 PR 리뷰에서 reject.
      */
@@ -164,12 +170,8 @@ public class Url {
      */
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof Url other)) {
-            return false;
-        }
+        if (this == o) return true;
+        if (!(o instanceof Url other)) return false;
         return id != null && id.equals(other.id);
     }
 

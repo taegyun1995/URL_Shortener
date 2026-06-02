@@ -1,8 +1,8 @@
-package com.urlshortener.application;
+package com.urlshortener.shorten.application;
 
 import com.urlshortener.domain.ShortKey;
-import com.urlshortener.infrastructure.persistence.entity.Url;
-import com.urlshortener.infrastructure.persistence.repository.UrlRepository;
+import com.urlshortener.persistence.Url;
+import com.urlshortener.persistence.UrlRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,7 +24,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class UrlServiceTest {
+class ShortenServiceTest {
 
     @Mock
     private UrlRepository urlRepository;
@@ -33,7 +33,7 @@ class UrlServiceTest {
     private Sqids sqids;
 
     @InjectMocks
-    private UrlService urlService;
+    private ShortenService shortenService;
 
     @Test
     void 새로운_URL_단축시_생성된_ShortKey를_반환한다() {
@@ -51,7 +51,7 @@ class UrlServiceTest {
         given(sqids.encode(List.of(42L))).willReturn("U9NJZQT");
 
         // when
-        ShortKey result = urlService.shorten("https://example.com");
+        ShortKey result = shortenService.shorten("https://example.com");
 
         // then
         assertThat(result.value()).isEqualTo("U9NJZQT");
@@ -70,38 +70,12 @@ class UrlServiceTest {
                 .willReturn(Optional.of(existing));
 
         // when
-        ShortKey result = urlService.shorten("https://example.com");
+        ShortKey result = shortenService.shorten("https://example.com");
 
         // then
         assertThat(result).isEqualTo(existingKey);
         // dedup이 동작하면 save·encode 모두 호출되지 않아야 함
         verify(urlRepository, never()).save(any(Url.class));
-    }
-
-    @Test
-    void resolve로_등록된_shortKey_조회시_원본_URL을_반환한다() {
-        // given
-        ShortKey key = ShortKey.of("abc1234");
-        Url url = Url.of("https://example.com/long/path", key);
-        given(urlRepository.findByShortKey(key)).willReturn(Optional.of(url));
-
-        // when
-        String result = urlService.resolve(key);
-
-        // then
-        assertThat(result).isEqualTo("https://example.com/long/path");
-    }
-
-    @Test
-    void resolve로_없는_shortKey_조회시_예외를_던진다() {
-        // given
-        ShortKey unknown = ShortKey.of("zzzzzzz");
-        given(urlRepository.findByShortKey(unknown)).willReturn(Optional.empty());
-
-        // when & then
-        assertThatThrownBy(() -> urlService.resolve(unknown))
-                .isInstanceOf(ShortKeyNotFoundException.class)
-                .hasMessageContaining("zzzzzzz");
     }
 
     @Test
@@ -113,7 +87,7 @@ class UrlServiceTest {
                 .willThrow(new DataIntegrityViolationException("duplicate long_url"));
 
         // when & then
-        assertThatThrownBy(() -> urlService.shorten("https://example.com"))
+        assertThatThrownBy(() -> shortenService.shorten("https://example.com"))
                 .isInstanceOf(ConcurrentShorteningException.class)
                 .hasMessageContaining("https://example.com");
     }

@@ -1,7 +1,7 @@
-package com.urlshortener.presentation;
+package com.urlshortener.shorten.web;
 
-import com.urlshortener.application.UrlService;
 import com.urlshortener.domain.ShortKey;
+import com.urlshortener.shorten.application.ShortenService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -26,11 +26,11 @@ class ShortenControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private UrlService urlService;
+    private ShortenService shortenService;
 
     @Test
     void URL_단축_요청시_201과_shortUrl을_반환한다() throws Exception {
-        given(urlService.shorten("https://example.com"))
+        given(shortenService.shorten("https://example.com"))
                 .willReturn(ShortKey.of("000000G"));
 
         mockMvc.perform(post("/api/shorten")
@@ -50,7 +50,7 @@ class ShortenControllerTest {
                 .andExpect(jsonPath("$.message").exists())
                 .andExpect(jsonPath("$.timestamp").exists());
 
-        verify(urlService, never()).shorten(any());
+        verify(shortenService, never()).shorten(any());
     }
 
     @Test
@@ -61,6 +61,6 @@ class ShortenControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
 
-        verify(urlService, never()).shorten(any());
+        verify(shortenService, never()).shorten(any());
     }
 }

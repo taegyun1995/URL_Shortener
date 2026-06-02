@@ -1,27 +1,25 @@
-package com.urlshortener.application;
+package com.urlshortener.shorten.application;
 
-import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
+import com.urlshortener.domain.ShortKey;
+import com.urlshortener.persistence.Url;
+import com.urlshortener.persistence.UrlRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
+import org.sqids.Sqids;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.urlshortener.config.CaffeineCacheConfig;
-import com.urlshortener.domain.ShortKey;
-import com.urlshortener.infrastructure.persistence.entity.Url;
-import com.urlshortener.infrastructure.persistence.repository.UrlRepository;
-import org.sqids.Sqids;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @Slf4j
-public class UrlService {
+public class ShortenService {
 
     private final UrlRepository urlRepository;
-    private final Sqids         sqids;
+    private final Sqids sqids;
 
-    public UrlService(UrlRepository urlRepository, Sqids sqids) {
+    public ShortenService(UrlRepository urlRepository, Sqids sqids) {
         this.urlRepository = urlRepository;
         this.sqids = sqids;
     }
@@ -29,23 +27,15 @@ public class UrlService {
     @Transactional
     public ShortKey shorten(String longUrl) {
         return urlRepository.findByLongUrl(longUrl)
-                            .map(existing -> {
-                                log.debug("dedup hit: longUrl already shortened to {}", existing.shortKey());
-                                return existing.shortKey();
-                            })
-                            .orElseGet(() -> createNewShortened(longUrl));
-    }
-
-    @Transactional(readOnly = true)
-    @Cacheable(value = CaffeineCacheConfig.URLS_CACHE, key = "#shortKey.value()")
-    public String resolve(ShortKey shortKey) {
-        return urlRepository.findByShortKey(shortKey)
-                            .map(Url::longUrl)
-                            .orElseThrow(() -> new ShortKeyNotFoundException(shortKey));
+                .map(existing -> {
+                    log.debug("dedup hit: longUrl already shortened to {}", existing.shortKey());
+                    return existing.shortKey();
+                })
+                .orElseGet(() -> createNewShortened(longUrl));
     }
 
     /**
-     * 신규 단축 키 발급
+     * INSERT-then-UPDATE 패턴으로 신규 단축 키 발급.
      * 1) placeholder 키로 INSERT → DB가 auto-increment id 부여
      * 2) 받은 id를 Sqids로 인코딩 → 실제 키
      * 3) entity의 shortKey 교체 → JPA dirty check가 트랜잭션 종료 시 UPDATE 발행

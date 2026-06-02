@@ -1,10 +1,9 @@
-package com.urlshortener.infrastructure.persistence.repository;
+package com.urlshortener.persistence;
 
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.urlshortener.domain.ShortKey;
-import com.urlshortener.infrastructure.persistence.entity.Url;
 
 public interface UrlRepository extends JpaRepository<Url, Long> {
 
