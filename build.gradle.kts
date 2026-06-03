@@ -26,9 +26,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     runtimeOnly("com.mysql:mysql-connector-j")
 
-    // Cache (Spring Cache + Caffeine in-process)
+    // Cache (Spring Cache + Caffeine in-process L1)
     implementation("org.springframework.boot:spring-boot-starter-cache")
     implementation("com.github.ben-manes.caffeine:caffeine")
+
+    // Cache L2 (Redis, Lettuce 클라이언트)
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
     // Short ID encoding (Sqids — Hashids 후속작)
     implementation("org.sqids:sqids:0.1.0")
