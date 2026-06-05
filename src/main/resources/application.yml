@@ -33,10 +33,7 @@ management:
 logging:
   level:
     root: INFO
-    com.urlshortener: DEBUG
-    # JPA SQL 추적 (공부용 — Phase 2 이후엔 INFO로 복귀 고려)
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE
+    # com.urlshortener·SQL 상세 로깅은 local 프로파일에서만 켠다(아래).
 
 ---
 spring:
@@ -67,8 +64,12 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-        format_sql: true
-    show-sql: true
+        format_sql: false
+    show-sql: false  # 부하 측정 정확도를 위해 끔(SQL 로깅이 처리량 -35% 유발). 디버깅 시 true
+logging:
+  level:
+    com.urlshortener: DEBUG   # 개발 디버깅용 (애플리케이션 흐름)
+    # org.hibernate.SQL: DEBUG  # SQL 보려면 주석 해제 (단, 부하 측정 땐 끌 것)
 
 ---
 spring:
