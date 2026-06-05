@@ -98,4 +98,32 @@ class RedirectServiceTest {
         verify(l2, never()).get(key);
         verify(urlRepository, never()).findByShortKey(key);
     }
+
+    @Test
+    void L2_get이_예외를_던져도_DB로_폴백해_정상_반환한다() {
+        // L2(Redis) 장애 상황 — get이 터짐
+        given(l1.get(key)).willReturn(Lookup.miss());
+        given(l2.get(key)).willThrow(new RuntimeException("redis down"));
+        given(urlRepository.findByShortKey(key))
+                .willReturn(Optional.of(Url.of(LONG_URL, key)));
+
+        String result = service().resolve(key);
+
+        assertThat(result).isEqualTo(LONG_URL);   // Redis 죽어도 서비스는 산다
+    }
+
+    @Test
+    void L2_put이_예외를_던져도_조회_결과를_정상_반환한다() {
+        // DB hit 후 L2 적재 중 장애 — 응답을 막으면 안 됨
+        given(l1.get(key)).willReturn(Lookup.miss());
+        given(l2.get(key)).willReturn(Lookup.miss());
+        given(urlRepository.findByShortKey(key))
+                .willReturn(Optional.of(Url.of(LONG_URL, key)));
+        org.mockito.BDDMockito.willThrow(new RuntimeException("redis down"))
+                .given(l2).put(key, LONG_URL);
+
+        String result = service().resolve(key);
+
+        assertThat(result).isEqualTo(LONG_URL);   // 캐싱 실패가 응답을 막지 않음
+    }
 }

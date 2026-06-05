@@ -41,8 +41,8 @@ public class RedirectService {
             return unwrap(l1Result, shortKey);
         }
 
-        // L2
-        Lookup l2Result = l2.get(shortKey);
+        // L2 — Redis 장애 시 miss로 간주하고 DB로 폴백 (캐시는 가용성을 막지 않는다)
+        Lookup l2Result = l2Get(shortKey);
         if (!l2Result.isMiss()) {
             if (!l2Result.negative()) {
                 l1.put(shortKey, l2Result.value());
@@ -56,15 +56,42 @@ public class RedirectService {
         return urlRepository.findByShortKey(shortKey)
                 .map(Url::longUrl)
                 .map(longUrl -> {
-                    l2.put(shortKey, longUrl);
+                    l2Put(shortKey, longUrl);
                     l1.put(shortKey, longUrl);
                     return longUrl;
                 })
                 .orElseThrow(() -> {
-                    l2.putNegative(shortKey);
+                    l2PutNegative(shortKey);
                     l1.putNegative(shortKey);
                     return new ShortKeyNotFoundException(shortKey);
                 });
+    }
+
+    // --- L2(Redis) 접근은 장애에 안전하게 감싼다. 캐시 실패가 리다이렉트를 막으면 안 된다. ---
+
+    private Lookup l2Get(ShortKey shortKey) {
+        try {
+            return l2.get(shortKey);
+        } catch (RuntimeException ex) {
+            log.warn("L2 get failed, falling back to DB: {}", ex.getMessage());
+            return Lookup.miss();
+        }
+    }
+
+    private void l2Put(ShortKey shortKey, String longUrl) {
+        try {
+            l2.put(shortKey, longUrl);
+        } catch (RuntimeException ex) {
+            log.warn("L2 put failed (ignored): {}", ex.getMessage());
+        }
+    }
+
+    private void l2PutNegative(ShortKey shortKey) {
+        try {
+            l2.putNegative(shortKey);
+        } catch (RuntimeException ex) {
+            log.warn("L2 putNegative failed (ignored): {}", ex.getMessage());
+        }
     }
 
     /** 캐시 hit 결과를 값으로 풀거나, negative면 예외로 변환. */
