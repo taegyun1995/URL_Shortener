@@ -1,10 +1,12 @@
 package com.urlshortener.shorten.application;
 
+import com.urlshortener.cache.UrlCache;
 import com.urlshortener.domain.ShortKey;
 import com.urlshortener.persistence.Url;
 import com.urlshortener.persistence.UrlRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.sqids.Sqids;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,10 +20,19 @@ public class ShortenService {
 
     private final UrlRepository urlRepository;
     private final Sqids sqids;
+    private final UrlCache l1;
+    private final UrlCache l2;
 
-    public ShortenService(UrlRepository urlRepository, Sqids sqids) {
+    public ShortenService(
+            UrlRepository urlRepository,
+            Sqids sqids,
+            @Qualifier("l1Cache") UrlCache l1,
+            @Qualifier("l2Cache") UrlCache l2
+    ) {
         this.urlRepository = urlRepository;
         this.sqids = sqids;
+        this.l1 = l1;
+        this.l2 = l2;
     }
 
     @Transactional
@@ -48,6 +59,10 @@ public class ShortenService {
             ShortKey finalKey = ShortKey.of(sqids.encode(List.of(saved.id())));
             saved.assignShortKey(finalKey);
 
+            // Write-Through: 방금 만든 매핑을 캐시에 미리 적재해 첫 조회부터 hit.
+            // 캐시 실패가 단축 자체를 막으면 안 되므로 예외는 삼킨다.
+            writeThrough(finalKey, saved.longUrl());
+
             log.debug("shortened: id={} key={}", saved.id(), finalKey);
             return finalKey;
         } catch (DataIntegrityViolationException ex) {
@@ -55,6 +70,20 @@ public class ShortenService {
             // 현재 TX는 rollback. 클라이언트는 재시도 시 기존 키를 받음.
             log.info("race condition on shorten: {}", longUrl);
             throw new ConcurrentShorteningException(longUrl, ex);
+        }
+    }
+
+    /** L1·L2에 매핑을 미리 적재. 캐시 장애는 무시(단축 응답을 막지 않는다). */
+    private void writeThrough(ShortKey key, String longUrl) {
+        try {
+            l1.put(key, longUrl);
+        } catch (RuntimeException ex) {
+            log.warn("L1 write-through failed (ignored): {}", ex.getMessage());
+        }
+        try {
+            l2.put(key, longUrl);
+        } catch (RuntimeException ex) {
+            log.warn("L2 write-through failed (ignored): {}", ex.getMessage());
         }
     }
 }

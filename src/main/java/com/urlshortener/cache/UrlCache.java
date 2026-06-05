@@ -1,14 +1,13 @@
-package com.urlshortener.redirect.application;
+package com.urlshortener.cache;
 
 import com.urlshortener.domain.ShortKey;
 
-import java.util.Optional;
-
 /**
- * 리다이렉트 조회 캐시 계층의 포트.
+ * 단축 URL 조회 캐시 계층의 포트.
  * <p>
  * L1(Caffeine in-process), L2(Redis) 구현이 이 인터페이스를 따른다.
- * {@link RedirectService}는 구체 캐시 기술을 모른 채 L1·L2를 같은 방식으로 다룬다.
+ * 조회({@link com.urlshortener.redirect.application.RedirectService})와
+ * 적재(shorten 시 Write-Through) 양쪽이 구체 캐시 기술을 모른 채 같은 방식으로 다룬다.
  * <p>
  * Negative cache(없는 키 표식)를 표현하기 위해 조회 결과를 3가지로 구분한다:
  * <ul>
@@ -18,6 +17,12 @@ import java.util.Optional;
  * </ul>
  */
 public interface UrlCache {
+
+    /**
+     * "이 키는 DB에도 없음"을 나타내는 sentinel. L1·L2 구현이 공유한다.
+     * 선행 공백 때문에 정상 longUrl(http/https로 시작)과 절대 겹치지 않는다.
+     */
+    String NEGATIVE = " __NEGATIVE__";
 
     Lookup get(ShortKey shortKey);
 

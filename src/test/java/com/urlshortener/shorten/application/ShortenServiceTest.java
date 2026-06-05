@@ -1,11 +1,11 @@
 package com.urlshortener.shorten.application;
 
+import com.urlshortener.cache.UrlCache;
 import com.urlshortener.domain.ShortKey;
 import com.urlshortener.persistence.Url;
 import com.urlshortener.persistence.UrlRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sqids.Sqids;
@@ -32,8 +32,15 @@ class ShortenServiceTest {
     @Mock
     private Sqids sqids;
 
-    @InjectMocks
-    private ShortenService shortenService;
+    @Mock
+    private UrlCache l1;
+
+    @Mock
+    private UrlCache l2;
+
+    private ShortenService service() {
+        return new ShortenService(urlRepository, sqids, l1, l2);
+    }
 
     @Test
     void 새로운_URL_단축시_생성된_ShortKey를_반환한다() {
@@ -47,18 +54,31 @@ class ShortenServiceTest {
                     ReflectionTestUtils.setField(url, "id", 42L);
                     return url;
                 });
-        // id=42 인코딩 → Sqids로 7자 키 생성
         given(sqids.encode(List.of(42L))).willReturn("U9NJZQT");
 
-        // when
-        ShortKey result = shortenService.shorten("https://example.com");
+        ShortKey result = service().shorten("https://example.com");
 
-        // then
         assertThat(result.value()).isEqualTo("U9NJZQT");
-
-        // INSERT-then-UPDATE 패턴 검증: save 1회 호출 + 인메모리 entity가 최종 키로 교체
-        // (save는 한 번만 명시 호출, UPDATE는 JPA dirty check로 트랜잭션 커밋 시점에 발생)
         verify(urlRepository, times(1)).save(any(Url.class));
+    }
+
+    @Test
+    void 새로운_URL_단축시_L1과_L2에_미리_적재한다_WriteThrough() {
+        given(urlRepository.findByLongUrl("https://example.com"))
+                .willReturn(Optional.empty());
+        given(urlRepository.save(any(Url.class)))
+                .willAnswer(invocation -> {
+                    Url url = invocation.getArgument(0);
+                    ReflectionTestUtils.setField(url, "id", 42L);
+                    return url;
+                });
+        given(sqids.encode(List.of(42L))).willReturn("U9NJZQT");
+
+        ShortKey key = service().shorten("https://example.com");
+
+        // Write-Through: 방금 만든 매핑을 캐시에 미리 넣어 첫 조회부터 hit
+        verify(l1).put(key, "https://example.com");
+        verify(l2).put(key, "https://example.com");
     }
 
     @Test
@@ -69,10 +89,8 @@ class ShortenServiceTest {
         given(urlRepository.findByLongUrl("https://example.com"))
                 .willReturn(Optional.of(existing));
 
-        // when
-        ShortKey result = shortenService.shorten("https://example.com");
+        ShortKey result = service().shorten("https://example.com");
 
-        // then
         assertThat(result).isEqualTo(existingKey);
         // dedup이 동작하면 save·encode 모두 호출되지 않아야 함
         verify(urlRepository, never()).save(any(Url.class));
@@ -80,14 +98,12 @@ class ShortenServiceTest {
 
     @Test
     void 동시_단축으로_long_url_UNIQUE_위반시_ConcurrentShorteningException을_던진다() {
-        // given: 다른 트랜잭션이 같은 longUrl을 먼저 INSERT한 상황 시뮬레이션
         given(urlRepository.findByLongUrl("https://example.com"))
                 .willReturn(Optional.empty());
         given(urlRepository.save(any(Url.class)))
                 .willThrow(new DataIntegrityViolationException("duplicate long_url"));
 
-        // when & then
-        assertThatThrownBy(() -> shortenService.shorten("https://example.com"))
+        assertThatThrownBy(() -> service().shorten("https://example.com"))
                 .isInstanceOf(ConcurrentShorteningException.class)
                 .hasMessageContaining("https://example.com");
     }
