@@ -36,9 +36,6 @@ public class Url {
     @Column(name = "expires_at")
     private Instant expiresAt;
 
-    @Column(name = "click_count", nullable = false)
-    private long clickCount;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -50,7 +47,6 @@ public class Url {
         this.longUrl = longUrl;
         this.shortKey = shortKey;
         this.expiresAt = expiresAt;
-        this.clickCount = 0L;
     }
 
     public static Url of(String longUrl, ShortKey shortKey) {
@@ -141,22 +137,6 @@ public class Url {
 
     public Instant createdAt() {
         return createdAt;
-    }
-
-    public long clickCount() {
-        return clickCount;
-    }
-
-    /**
-     * 클릭 수 +1.
-     *
-     * <p><b>동시성 한계:</b> 단순 `clickCount++`라 두 트랜잭션이 동시에 읽고 쓰면
-     * lost update가 발생한다. 1단계에선 리다이렉트 경로에서 호출하지 않아 문제없지만,
-     * 4단계에서 통계를 켜면 <b>로그 기반 집계</b>로 전환해 이 메서드 의존을 제거한다.
-     * (DB-level `UPDATE ... SET click_count = click_count + 1` 또는 Redis INCR 대안)
-     */
-    public void incrementClickCount() {
-        this.clickCount++;
     }
 
     public boolean isExpired(Instant now) {

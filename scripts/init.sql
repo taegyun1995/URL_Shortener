@@ -16,21 +16,8 @@ CREATE TABLE IF NOT EXISTS urls (
     long_url    VARCHAR(2048) NOT NULL,
     created_at  DATETIME      DEFAULT CURRENT_TIMESTAMP,
     expires_at  DATETIME      NULL,
-    click_count BIGINT        DEFAULT 0,
 
     -- long_url UNIQUE: 동시 단축 race condition 방어 (DB가 최종 게이트키퍼)
     UNIQUE KEY uk_long_url (long_url(255)),
     INDEX idx_short_key (short_key)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- click_logs: 리다이렉트 클릭 이력 (4단계에서 본격 사용)
-CREATE TABLE IF NOT EXISTS click_logs (
-    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
-    short_key  VARCHAR(7)    NOT NULL,
-    clicked_at DATETIME      DEFAULT CURRENT_TIMESTAMP,
-    ip         VARCHAR(45),
-    user_agent VARCHAR(512),
-    referer    VARCHAR(2048),
-
-    INDEX idx_short_key_time (short_key, clicked_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

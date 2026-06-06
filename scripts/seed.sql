@@ -18,11 +18,10 @@ BEGIN
         SELECT CONCAT('Skipping seed: urls table already has ', current_count, ' rows') AS msg;
     ELSE
         WHILE i <= 10000 DO
-            INSERT IGNORE INTO urls (short_key, long_url, click_count, created_at)
+            INSERT IGNORE INTO urls (short_key, long_url, created_at)
             VALUES (
                 LPAD(CONV(i + 1000000, 10, 36), 7, '0'),    -- id offset으로 더 다양한 키
                 CONCAT('https://example.com/seeded/page/', i),
-                0,
                 NOW()
             );
             SET i = i + 1;

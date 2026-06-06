@@ -71,20 +71,6 @@ class UrlTest {
     }
 
     @Test
-    void 신규_Url의_클릭수는_0이다() {
-        Url url = Url.of("https://example.com", ANY_KEY);
-        assertThat(url.clickCount()).isZero();
-    }
-
-    @Test
-    void 클릭수_증가시_1씩_늘어난다() {
-        Url url = Url.of("https://example.com", ANY_KEY);
-        url.incrementClickCount();
-        url.incrementClickCount();
-        assertThat(url.clickCount()).isEqualTo(2L);
-    }
-
-    @Test
     void 만료일이_없으면_만료되지_않은_상태다() {
         Url url = Url.of("https://example.com", ANY_KEY);
         assertThat(url.isExpired(Instant.now())).isFalse();
