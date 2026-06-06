@@ -52,6 +52,10 @@ dependencies {
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("com.h2database:h2")
+
+    // 통합 테스트 (실제 Redis 컨테이너로 캐시 어댑터 검증)
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:junit-jupiter")
 }
 
 tasks.test {
