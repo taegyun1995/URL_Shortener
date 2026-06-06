@@ -90,6 +90,41 @@ class RedirectServiceTest {
     }
 
     @Test
+    void DB_hit이지만_만료된_URL이면_404를_던지고_Negative를_캐싱한다() {
+        given(l1.get(key)).willReturn(Lookup.miss());
+        given(l2.get(key)).willReturn(Lookup.miss());
+        // 과거 시각으로 만료된 Url (Instant.now() 기준 항상 만료)
+        java.time.Instant past = java.time.Instant.parse("2020-01-01T00:00:00Z");
+        given(urlRepository.findByShortKey(key))
+                .willReturn(Optional.of(Url.of(LONG_URL, key, past)));
+
+        assertThatThrownBy(() -> service().resolve(key))
+                .isInstanceOf(ShortKeyNotFoundException.class);
+
+        // 만료 = 없는 것과 같다 → negative 캐싱 (반복 조회가 DB 안 치게)
+        verify(l2).putNegative(key);
+        verify(l1).putNegative(key);
+        // 만료 URL을 positive로 적재하면 안 됨
+        verify(l1, never()).put(key, LONG_URL);
+        verify(l2, never()).put(key, LONG_URL);
+    }
+
+    @Test
+    void DB_hit이고_만료되지_않은_URL이면_정상_반환하고_적재한다() {
+        given(l1.get(key)).willReturn(Lookup.miss());
+        given(l2.get(key)).willReturn(Lookup.miss());
+        java.time.Instant future = java.time.Instant.parse("2999-01-01T00:00:00Z");
+        given(urlRepository.findByShortKey(key))
+                .willReturn(Optional.of(Url.of(LONG_URL, key, future)));
+
+        String result = service().resolve(key);
+
+        assertThat(result).isEqualTo(LONG_URL);
+        verify(l1).put(key, LONG_URL);
+        verify(l2).put(key, LONG_URL);
+    }
+
+    @Test
     void L1_Negative_hit이면_DB를_조회하지_않고_바로_예외를_던진다() {
         given(l1.get(key)).willReturn(Lookup.negativeHit());
 

@@ -5,6 +5,8 @@ import com.urlshortener.persistence.Url;
 import com.urlshortener.persistence.UrlRepository;
 import com.urlshortener.cache.UrlCache;
 import com.urlshortener.cache.UrlCache.Lookup;
+
+import java.time.Instant;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>
  * 조회 순서: L1(Caffeine) → L2(Redis) → DB. 하위 계층에서 찾으면 상위 계층을 역순으로 채운다.
  * 없는 키는 negative cache로 표시해 무한 DB 조회(§7 Negative Cache)를 막는다.
+ * <p>
+ * 만료(expiresAt)는 <b>DB hit 시점에만</b> 검사한다 — 만료된 URL은 캐시에 적재하지 않고
+ * negative로 표시한다. 캐시에 이미 들어간 positive 값은 캐시 TTL(L1 5분/L2 1시간)이
+ * 만료를 자연 흡수하므로 별도 검사하지 않는다(짧은 stale 허용). 정확한 즉시 만료가
+ * 필요하면 캐시 값에 expiresAt을 실어야 하는데, 그 비용 대비 이득이 작아 미적용.
  */
 @Service
 @Slf4j
@@ -53,8 +60,9 @@ public class RedirectService {
             return unwrap(l2Result, shortKey);
         }
 
-        // DB
+        // DB — 만료된 URL은 "없는 것"과 동일하게 취급(filter로 제거 → negative 경로로)
         return urlRepository.findByShortKey(shortKey)
+                .filter(url -> !url.isExpired(Instant.now()))
                 .map(Url::longUrl)
                 .map(longUrl -> {
                     l2Put(shortKey, longUrl);
