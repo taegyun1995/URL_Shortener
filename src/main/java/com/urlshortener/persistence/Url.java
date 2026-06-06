@@ -118,11 +118,11 @@ public class Url {
     }
 
     /**
-     * 더블 세이브 패턴 전용 — placeholder shortKey로 insert 후 실제 id 기반 키로 교체.
+     * placeholder shortKey로 INSERT한 뒤, DB가 부여한 id로 만든 실제 키로 교체한다.
+     * shortKey 생성에 id가 필요하지만 id는 INSERT 후에야 정해지므로, 한 번 더 쓰는 구조다.
      *
-     * <p><b>호출 허용:</b> {@code ShortenService}에서만 (생성 직후 1회).<br>
-     * <b>호출 금지:</b> 컨트롤러, 다른 서비스, 마이그레이션 코드, 테스트 fixture 외 위치.<br>
-     * 컴파일러로 막을 수 없어 컨벤션으로 보호한다. 위반 시 PR 리뷰에서 reject.
+     * <p>{@code ShortenService}의 생성 직후에만 호출한다. 컨트롤러·다른 서비스에서는
+     * 호출하지 않는다(컴파일러로 막을 수 없어 컨벤션으로 보호).
      */
     public void assignShortKey(ShortKey newShortKey) {
         if (newShortKey == null) {

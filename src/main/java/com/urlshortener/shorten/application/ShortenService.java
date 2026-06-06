@@ -46,10 +46,10 @@ public class ShortenService {
     }
 
     /**
-     * INSERT-then-UPDATE 패턴으로 신규 단축 키 발급.
+     * 신규 단축 키 발급. shortKey 생성에 id가 필요하나 id는 INSERT 후 정해지므로 INSERT 후 UPDATE한다.
      * 1) placeholder 키로 INSERT → DB가 auto-increment id 부여
      * 2) 받은 id를 Sqids로 인코딩 → 실제 키
-     * 3) entity의 shortKey 교체 → JPA dirty check가 트랜잭션 종료 시 UPDATE 발행
+     * 3) entity의 shortKey 교체 → JPA 변경 감지(dirty checking)가 커밋 시 UPDATE 발행
      */
     private ShortKey createNewShortened(String longUrl) {
         try {
@@ -59,8 +59,8 @@ public class ShortenService {
             ShortKey finalKey = ShortKey.of(sqids.encode(List.of(saved.id())));
             saved.assignShortKey(finalKey);
 
-            // Write-Through: 방금 만든 매핑을 캐시에 미리 적재해 첫 조회부터 hit.
-            // 캐시 실패가 단축 자체를 막으면 안 되므로 예외는 삼킨다.
+            // 방금 만든 매핑을 캐시에 미리 적재해 첫 조회부터 캐시 hit이 되게 한다(write-through).
+            // 캐시 적재 실패가 단축 자체를 막으면 안 되므로 예외는 삼킨다.
             writeThrough(finalKey, saved.longUrl());
 
             log.debug("shortened: id={} key={}", saved.id(), finalKey);

@@ -16,7 +16,7 @@ import java.time.Duration;
  * L2(Redis)는 {@code StringRedisTemplate}을 그대로 쓴다(별도 빈 불필요).
  * <p>
  * L1 크기는 {@code app.cache.l1.max-size}로 조정한다(기본 10,000).
- * L1/L2 분담을 측정할 때 L1을 작게 잡아 L2가 받쳐주는 구간을 만들 수 있다.
+ * L1/L2 분담을 측정할 때 L1을 작게 잡으면 L1에서 빠진 키를 L2가 처리하는 구간을 만들 수 있다.
  */
 @Configuration
 public class CacheConfig {

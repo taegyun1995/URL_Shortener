@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>
  * 만료(expiresAt)는 <b>DB hit 시점에만</b> 검사한다 — 만료된 URL은 캐시에 적재하지 않고
  * negative로 표시한다. 캐시에 이미 들어간 positive 값은 캐시 TTL(L1 5분/L2 1시간)이
- * 만료를 자연 흡수하므로 별도 검사하지 않는다(짧은 stale 허용). 정확한 즉시 만료가
+ * 만료보다 캐시 TTL이 먼저 지나 값이 빠지므로 별도 검사하지 않는다(짧은 stale 허용). 정확한 즉시 만료가
  * 필요하면 캐시 값에 expiresAt을 실어야 하는데, 그 비용 대비 이득이 작아 미적용.
  */
 @Service

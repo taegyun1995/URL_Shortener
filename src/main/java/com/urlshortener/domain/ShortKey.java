@@ -49,8 +49,8 @@ public final class ShortKey {
 
     /**
      * 무작위 알파벳 문자로 채운 placeholder ShortKey.
-     * 더블 세이브 패턴의 1단계 INSERT 용으로 쓰인다.
-     * placeholder는 UPDATE로 덮어쓰므로 보안 강도는 불필요 — `ThreadLocalRandom`도 OK.
+     * INSERT 시점에 임시로 쓰고, 생성된 id 기반 키로 UPDATE되어 덮어쓰인다.
+     * 덮어쓰일 값이라 보안 강도가 필요 없어 {@code ThreadLocalRandom}으로 충분하다.
      */
     public static ShortKey random(Random random) {
         StringBuilder sb = new StringBuilder(LENGTH);
