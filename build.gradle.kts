@@ -33,6 +33,9 @@ dependencies {
     // Cache L2 (Redis, Lettuce 클라이언트)
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
+    // Short ID encoding (Sqids — Hashids 후속작)
+    implementation("org.sqids:sqids:0.1.0")
+
     // Swagger
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5")
 
